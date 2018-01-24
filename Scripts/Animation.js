@@ -13,21 +13,17 @@
         document.addEventListener('click', clickHandler);
         
         // Init
-        let grid = gridFactory();
+        const painter = canvasElement.getContext('2d');
 
         SetFullSize();
-        grid.drawGrid();
 
+        let grid = gridFactory();
         
         function clickHandler(e) {
             let cell = grid.getClosestCell(e.clientX, e.clientY);
-            paintCell(cell, '#330000');
-        }
-        
-        function paintCell(cell, color) {
-            const newPainter = canvasElement.getContext('2d');
-            newPainter.strokeStyle = color;
-            cell.drawCell(newPainter);
+            cell.color = 'rgb(0, 132, 180)';
+            cell.layer = 1;
+            grid.reDraw();
         }
         
         function SetFullSize() {
@@ -37,11 +33,41 @@
 
         function gridFactory() {
 
-            const cellDiameter = 90;
+            let backgroundColor = '#333333';
+            let foregoundColor = '#eee';
+            const cellDiameter = 100;
             const cellRadius = cellDiameter / 2;
             const halfCellRadius = cellRadius / 2;
-            const painter = canvasElement.getContext('2d');
             let cellArray = [];
+            
+            init();
+            
+            function init() {
+                let verticleSpacing = cellDiameter;
+                let horizontalSpacing = (cellDiameter * 0.75);
+
+                let xCount = canvasElement.width / cellRadius;
+                let yCount = canvasElement.height / cellDiameter;
+
+                cellArray = [];
+
+                for (let x = 0; x < xCount; x++) {
+                    for (let y = 0; y < yCount; y++) {
+
+                        let tempY = (y * verticleSpacing);
+                        let tempX = (x * horizontalSpacing);
+
+                        if (x % 2 !== 0){
+                            tempY = tempY + cellRadius;
+                        }
+                        
+                        let cell = cellFactory(tempX, tempY, x,  y, foregoundColor, 0);
+                        cellArray.push(cell);
+                    }
+                }
+
+                reDraw();
+            }
 
             function getCell(x, y) {
                 return cellArray.filter(function (cell) {
@@ -67,77 +93,74 @@
                 }).cell;
             }
             
-            function drawGrid() {
-
+            function reDraw() {
+                fillBackground();
+                drawGrid();
+            }
+            
+            function fillBackground() {
                 // Paint settings
-                painter.strokeStyle = '#eee';
-
-                let verticleSpacing = cellDiameter;
-                let horizontalSpacing = cellDiameter * 0.75;
+                painter.fillStyle = backgroundColor;
                 
-                let xCount = canvasElement.width / cellRadius;
-                let yCount = canvasElement.height / cellDiameter;
+                painter.fillRect(0,0,canvasElement.width, canvasElement.height);
+            }
+            
+            function drawGrid() {
                 
-                cellArray = [];
+                let iterations = cellArray.reduce(function (prev, current) {
+                    return current.layer > prev.layer ? current : prev;
+                }).layer + 1;
                 
-                for (let x = 0; x < xCount; x++) {
-                    for (let y = 0; y < yCount; y++) {
-
-                        let tempY = y * verticleSpacing;
-                        let tempX = x * horizontalSpacing;
-
-                        if (x % 2 !== 0){
-                            tempY = tempY + cellRadius;
+                for(let i = 0; i < iterations; i++){
+                    cellArray.forEach(function (cell) {
+                        if (cell.layer === i) {
+                            cell.drawCell();
                         }
-
-                        let cell = cellFactory(tempX, tempY, x,  y);
-                        cell.drawCell(painter);
-                        cellArray.push(cell);
-                    }
+                    });
                 }
-                
-                
-
             }
 
-            function cellFactory(x, y, xInd, yInd) {
+            function cellFactory(x, y, xInd, yInd, color, layer) {
                 
-                function drawCell(painter) {
-
-                    let start = {y:y - cellRadius, x: x + halfCellRadius};
-                    let cord = [];
-                    
-                    cord[0] = {y:y, x: x + cellRadius};
-                    cord[1] = {y:y + cellRadius, x: x + halfCellRadius};
-                    cord[2] = {y:y + cellRadius, x: x - halfCellRadius};
-                    cord[3] = {y:y, x: x - cellRadius};
-                    cord[4] = {y:y - cellRadius, x: x - halfCellRadius};
-
-                    painter.beginPath();
-                    painter.moveTo(start.x, start.y);
-                    
-                    for(let i = 0; i < cord.length; i++){
-                        painter.lineTo(cord[i].x, cord[i].y);
-                    }
-
-                    painter.lineTo(start.x, start.y);
-
-                    painter.stroke();
-                }
-
-                return {
-                    yCord: y,
-                    xCord: x,
+                const proto = {
+                    xCord: x, 
+                    yCord: y, 
                     xIndex: xInd,
                     yIndex: yInd,
-                    drawCell
-                }
+                    color: color,
+                    layer: layer,
+                    drawCell: function () {
+                        let start = {y:this.yCord - cellRadius, x: this.xCord + halfCellRadius};
+                        let cord = [];
 
+                        cord[0] = {y:this.yCord, x: this.xCord + cellRadius};
+                        cord[1] = {y:this.yCord + cellRadius, x: this.xCord + halfCellRadius};
+                        cord[2] = {y:this.yCord + cellRadius, x: this.xCord - halfCellRadius};
+                        cord[3] = {y:this.yCord, x: this.xCord - cellRadius};
+                        cord[4] = {y:this.yCord - cellRadius, x: this.xCord - halfCellRadius};
+
+                        painter.strokeStyle = this.color;
+                        painter.lineWidth = 4;
+                        
+                        painter.beginPath();
+                        painter.moveTo(start.x, start.y);
+
+                        for(let i = 0; i < cord.length; i++){
+                            painter.lineTo(cord[i].x, cord[i].y);
+                        }
+
+                        painter.lineTo(start.x, start.y);
+
+                        painter.stroke();
+                    }
+                };
+                
+                return Object.create(proto);
             }
             
             return{
                 cellArray,
-                drawGrid,
+                reDraw,
                 getCell,
                 getClosestCell
             }
