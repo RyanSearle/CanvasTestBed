@@ -20,10 +20,11 @@
 
         function gridFactory() {
 
-            const cellDiameter = 50;
+            const cellDiameter = 90;
             const cellRadius = cellDiameter / 2;
             const halfCellRadius = cellRadius / 2;
             const painter = canvasElement.getContext('2d');
+            painter.strokeStyle = '#eee';
 
             // Init
             draw();
@@ -36,22 +37,19 @@
                 let xCount = canvasElement.width / cellRadius;
                 let yCount = canvasElement.height / cellDiameter;
                 
-                let extraSpacing = false;
-
                 for (let x = 0; x < xCount; x++) {
                     for (let y = 0; y < yCount; y++) {
 
                         let tempY = y * verticleSpacing;
                         let tempX = x * horizontalSpacing;
 
-                        if (extraSpacing){
+                        if (x % 2 !== 0){
                             tempY = tempY + cellRadius;
                         }
 
                         let cell = cellFactory(tempX, tempY);
                         cell.draw(painter);
                     }
-                    extraSpacing = !extraSpacing;
                 }
                 
                 
