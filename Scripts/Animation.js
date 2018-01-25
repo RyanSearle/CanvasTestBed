@@ -21,8 +21,8 @@
         let grid = gridFactory();
 
         function clickHandler(e) {
-            let cell = grid.getClosestCell(e.clientX, e.clientY);
-            // let cell = grid.getCell(5, 5);
+            // let cell = grid.getClosestCell(e.clientX, e.clientY);
+            let cell = grid.getCell(7, 5);
             cell.style.color = 'rgb(0, 132, 180)';
             cell.style.backgroundColor = '#330000';
             cell.style.layer = 2;
@@ -149,7 +149,7 @@
                                 layer: 0
                             };
 
-                            let cell = cellFactory(x, y, style);
+                            let cell = cellFactory(x, y, style, this);
                             this.cellArray.push(cell);
                         }
                     }
@@ -187,9 +187,10 @@
             return Object.create(proto).init();
         }
 
-        function cellFactory(xInd, yInd, style) {
+        function cellFactory(xInd, yInd, style, grid) {
 
             const proto = {
+                grid: grid, 
                 xIndex: xInd,
                 yIndex: yInd,
                 style: style,
@@ -216,9 +217,19 @@
                     painter.strokeStyle = this.style.color || '#666';
                     painter.lineWidth = this.style.cellThickness || '2';
 
-                    this.mapBackgroundPath(diameter, adjustedCoords);
-                    painter.fill();
-                    painter.stroke();
+                    // Doesn't Have cell bottom left
+                    if(!this.getAdjacentCell('bl')){
+                        this.mapLeftBackgroundPath(diameter, adjustedCoords);
+                        painter.fill();
+                        painter.stroke();
+                    }
+
+                    // Doesn't Have cell bottom right
+                    if(!this.getAdjacentCell('br')){
+                        this.mapRightBackgroundPath(diameter, adjustedCoords);
+                        painter.fill();
+                        painter.stroke();
+                    }
                 },
                 clearCell: function (diameter) {
                     let adjustedCoords = this.getCoordinates(diameter);
@@ -265,7 +276,7 @@
                     let radius = diameter / 2;
                     let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
 
-                    let baseHeight = diameter / 2;
+                    let baseHeight = diameter / 4;
                     let cord = [];
 
                     // Bottom Left
@@ -294,6 +305,58 @@
 
                     painter.lineTo(start.x, start.y);
                 },
+                mapLeftBackgroundPath: function (diameter, adjustedCoords) {
+                    let halfRadius = diameter / 4;
+                    let radius = diameter / 2;
+                    let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
+
+                    let baseHeight = diameter / 4;
+                    let cord = [];
+
+                    // Bottom Left
+                    let start = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x - shortRadius};
+                    // Bottom Left -down
+                    cord[0] = {y: (adjustedCoords.y + radius / 2) + baseHeight, x: adjustedCoords.x - shortRadius};
+                    // Bottom -down
+                    cord[1] = {y: (adjustedCoords.y + radius) + baseHeight, x: adjustedCoords.x};
+                    // Bottom
+                    cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
+
+                    painter.beginPath();
+                    painter.moveTo(start.x, start.y);
+
+                    for (let i = 0; i < cord.length; i++) {
+                        painter.lineTo(cord[i].x, cord[i].y);
+                    }
+
+                    painter.lineTo(start.x, start.y);
+                },
+                mapRightBackgroundPath: function (diameter, adjustedCoords) {
+                    let halfRadius = diameter / 4;
+                    let radius = diameter / 2;
+                    let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
+
+                    let baseHeight = diameter / 4;
+                    let cord = [];
+
+                    // Bottom Right
+                    let start =  {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x + shortRadius};
+                    // Bottom Right -down
+                    cord[0] = {y: (adjustedCoords.y + radius / 2) + baseHeight, x: adjustedCoords.x + shortRadius};
+                    // Bottom -down
+                    cord[1] = {y: (adjustedCoords.y + radius) + baseHeight, x: adjustedCoords.x};
+                    // Bottom
+                    cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
+                    
+                    painter.beginPath();
+                    painter.moveTo(start.x, start.y);
+
+                    for (let i = 0; i < cord.length; i++) {
+                        painter.lineTo(cord[i].x, cord[i].y);
+                    }
+
+                    painter.lineTo(start.x, start.y);
+                },
                 getCoordinates: function (diameter) {
                     let skew = 0.2 * diameter;
                     let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
@@ -308,6 +371,22 @@
                     }
 
                     return getCenteredCoordinates(tempX, tempY);
+                },
+                getAdjacentCell: function (direction) {
+                    switch (direction){
+                        case 'l': // Left
+                            return this.grid.getCell(this.xIndex - 1, this.yIndex);
+                        case 'tr': // Top Right
+                            return this.grid.getCell(this.xIndex, this.yIndex - 1);
+                        case 'br': // Bottom Right
+                            return this.grid.getCell(this.xIndex + 1, this.yIndex + 1);
+                        case 'r': // Right
+                            return this.grid.getCell(this.xIndex + 1, this.yIndex);
+                        case 'bl': // Bottom Left
+                            return this.grid.getCell(this.xIndex - 1, this.yIndex + 1);
+                        case 'tl': // TOP Left
+                            return this.grid.getCell(this.xIndex - 1, this.yIndex - 1);
+                    }
                 }
             };
 
