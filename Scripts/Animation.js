@@ -22,6 +22,7 @@
 
         function clickHandler(e) {
             let cell = grid.getClosestCell(e.clientX, e.clientY);
+            // let cell = grid.getCell(5, 5);
             cell.style.color = 'rgb(0, 132, 180)';
             cell.style.backgroundColor = '#330000';
             cell.style.layer = 2;
@@ -53,11 +54,11 @@
                 backgroundColor: '#eee',
                 foregoundColor: '#666666',
                 cellDiameter: 30,
-                get cellDiameterShort(){
+                get cellDiameterShort() {
                     return (this.cellDiameter / 2) * Math.sqrt(3);
-                }, 
-                xCount: 20,
-                yCount: 15,
+                },
+                xCount: 8,
+                yCount: 6,
                 cellThickness: 4,
                 cellArray: [],
                 init: function () {
@@ -105,6 +106,10 @@
                         return current.style.layer > prev.style.layer ? current : prev;
                     }).style.layer + 1;
 
+                    this.cellArray.forEach(function (cell) {
+                        cell.drawCellBackground(module.cellDiameter);
+                    });
+                        
                     for (let i = 0; i < iterations; i++) {
                         this.cellArray.forEach(function (cell) {
                             if (cell.style.layer === i) {
@@ -116,8 +121,8 @@
                 fillGrid: function () {
                     this.cellArray = [];
 
-                    for (let x = 1 - this.xCount; x < this.xCount; x++) {
-                        for (let y = 1 - this.yCount; y < this.yCount; y++) {
+                    for (let y = 1 - this.yCount; y < this.yCount; y++) {
+                        for (let x = 1 - this.xCount; x < this.xCount; x++) {
 
                             // Check cell for matching rules
                             let styleResult = this.creationRules.map(function (creationRule) {
@@ -130,9 +135,9 @@
                             }).sort(function (a, b) {
                                 return b.priority - a.priority;
                             })[0];
-                         
+
                             let style;
-                            if (styleResult){
+                            if (styleResult) {
                                 style = styleResult.result;
                             }
 
@@ -202,6 +207,19 @@
                     painter.fill();
                     painter.stroke();
                 },
+                drawCellBackground: function (diameter) {
+
+                    let adjustedCoords = this.getCoordinates(diameter);
+                    this.lastRenderedCoords = adjustedCoords;
+
+                    painter.fillStyle = this.style.backgroundColor || 'white';
+                    painter.strokeStyle = this.style.color || '#666';
+                    painter.lineWidth = this.style.cellThickness || '2';
+
+                    this.mapBackgroundPath(diameter, adjustedCoords);
+                    painter.fill();
+                    painter.stroke();
+                },
                 clearCell: function (diameter) {
                     let adjustedCoords = this.getCoordinates(diameter);
                     painter.fillStyle = 'white';
@@ -216,19 +234,57 @@
                     let halfRadius = diameter / 4;
                     let radius = diameter / 2;
                     let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
-                    
-                    let start = {y: adjustedCoords.y - shortRadius, x: adjustedCoords.x + halfRadius};
+
+                    let skew = 0.2 * diameter;
+
+                    let cord = [];
+                    // Top
+                    let start = {y: (adjustedCoords.y - radius) + skew, x: adjustedCoords.x};
+                    // Top Right
+                    cord[0] = {y: (adjustedCoords.y - radius / 2) + skew, x: adjustedCoords.x + shortRadius};
+                    // Bottom Right
+                    cord[1] = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x + shortRadius};
+                    // Bottom
+                    cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
+                    // Bottom Left
+                    cord[3] = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x - shortRadius};
+                    // Top Left
+                    cord[4] = {y: (adjustedCoords.y - radius / 2) + skew, x: adjustedCoords.x - shortRadius};
+
+                    painter.beginPath();
+                    painter.moveTo(start.x, start.y);
+
+                    for (let i = 0; i < cord.length; i++) {
+                        painter.lineTo(cord[i].x, cord[i].y);
+                    }
+
+                    painter.lineTo(start.x, start.y);
+                },
+                mapBackgroundPath: function (diameter, adjustedCoords) {
+                    let halfRadius = diameter / 4;
+                    let radius = diameter / 2;
+                    let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
+
+                    let baseHeight = diameter / 2;
                     let cord = [];
 
-                    cord[0] = {y: adjustedCoords.y, x: adjustedCoords.x + radius};
-                    cord[1] = {y: adjustedCoords.y + shortRadius, x: adjustedCoords.x + halfRadius};
-                    cord[2] = {y: adjustedCoords.y + shortRadius, x: adjustedCoords.x - halfRadius};
-                    cord[3] = {y: adjustedCoords.y, x: adjustedCoords.x - radius};
-                    cord[4] = {y: adjustedCoords.y - shortRadius, x: adjustedCoords.x - halfRadius};
+                    // Bottom Left
+                    let start = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x - shortRadius};
+                    // Bottom Left -down
+                    cord[0] = {y: (adjustedCoords.y + radius / 2) + baseHeight, x: adjustedCoords.x - shortRadius};
+                    // Bottom -down
+                    cord[1] = {y: (adjustedCoords.y + radius) + baseHeight, x: adjustedCoords.x};
+                    // Bottom
+                    cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
+                    // Bottom -down
+                    cord[3] = {y: (adjustedCoords.y + radius) + baseHeight, x: adjustedCoords.x};
+                    // Bottom Right -down
+                    cord[4] = {y: (adjustedCoords.y + radius / 2) + baseHeight, x: adjustedCoords.x + shortRadius};
+                    // Bottom Right
+                    cord[5] = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x + shortRadius};
+                    // Bottom
+                    cord[6] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
 
-                    // let start = {y: adjustedCoords.y - radius, x: adjustedCoords.x};
-                    // cord[0] = {y: adjustedCoords.y, x: adjustedCoords.x + radius};
-                    
                     painter.beginPath();
                     painter.moveTo(start.x, start.y);
 
@@ -239,14 +295,16 @@
                     painter.lineTo(start.x, start.y);
                 },
                 getCoordinates: function (diameter) {
-                    let verticleSpacing = (diameter / 2) * Math.sqrt(3);
-                    let horizontalSpacing = (diameter * 0.75);
+                    let skew = 0.2 * diameter;
+                    let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
+                    let horizontalSpacing = (diameter / 2) * Math.sqrt(3);
+                    let verticleSpacing = (diameter * 0.75);
 
-                    let tempY = (this.yIndex * verticleSpacing);
+                    let tempY = (this.yIndex * (verticleSpacing - skew));
                     let tempX = (this.xIndex * horizontalSpacing);
 
-                    if (this.xIndex % 2 !== 0) {
-                        tempY = tempY + verticleSpacing / 2;
+                    if (this.yIndex % 2 !== 0) {
+                        tempX = tempX + shortRadius;
                     }
 
                     return getCenteredCoordinates(tempX, tempY);
