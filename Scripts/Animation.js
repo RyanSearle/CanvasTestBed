@@ -24,7 +24,7 @@
             let cell = grid.getClosestCell(e.clientX, e.clientY);
             cell.style.color = 'rgb(0, 132, 180)';
             cell.style.backgroundColor = '#330000';
-            cell.style.layer = 1;
+            cell.style.layer = 2;
             cell.updateCell(grid.cellDiameter);
         }
 
@@ -53,6 +53,9 @@
                 backgroundColor: '#eee',
                 foregoundColor: '#666666',
                 cellDiameter: 30,
+                get cellDiameterShort(){
+                    return (this.cellDiameter / 2) * Math.sqrt(3);
+                }, 
                 xCount: 20,
                 yCount: 15,
                 cellThickness: 4,
@@ -212,16 +215,20 @@
                 mapPath: function (diameter, adjustedCoords) {
                     let halfRadius = diameter / 4;
                     let radius = diameter / 2;
-
-                    let start = {y: adjustedCoords.y - radius, x: adjustedCoords.x + halfRadius};
+                    let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
+                    
+                    let start = {y: adjustedCoords.y - shortRadius, x: adjustedCoords.x + halfRadius};
                     let cord = [];
 
                     cord[0] = {y: adjustedCoords.y, x: adjustedCoords.x + radius};
-                    cord[1] = {y: adjustedCoords.y + radius, x: adjustedCoords.x + halfRadius};
-                    cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x - halfRadius};
+                    cord[1] = {y: adjustedCoords.y + shortRadius, x: adjustedCoords.x + halfRadius};
+                    cord[2] = {y: adjustedCoords.y + shortRadius, x: adjustedCoords.x - halfRadius};
                     cord[3] = {y: adjustedCoords.y, x: adjustedCoords.x - radius};
-                    cord[4] = {y: adjustedCoords.y - radius, x: adjustedCoords.x - halfRadius};
+                    cord[4] = {y: adjustedCoords.y - shortRadius, x: adjustedCoords.x - halfRadius};
 
+                    // let start = {y: adjustedCoords.y - radius, x: adjustedCoords.x};
+                    // cord[0] = {y: adjustedCoords.y, x: adjustedCoords.x + radius};
+                    
                     painter.beginPath();
                     painter.moveTo(start.x, start.y);
 
@@ -232,14 +239,14 @@
                     painter.lineTo(start.x, start.y);
                 },
                 getCoordinates: function (diameter) {
-                    let verticleSpacing = diameter;
+                    let verticleSpacing = (diameter / 2) * Math.sqrt(3);
                     let horizontalSpacing = (diameter * 0.75);
 
                     let tempY = (this.yIndex * verticleSpacing);
                     let tempX = (this.xIndex * horizontalSpacing);
 
                     if (this.xIndex % 2 !== 0) {
-                        tempY = tempY + diameter / 2;
+                        tempY = tempY + verticleSpacing / 2;
                     }
 
                     return getCenteredCoordinates(tempX, tempY);
