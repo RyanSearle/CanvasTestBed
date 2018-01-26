@@ -1,6 +1,6 @@
 (function () {
 
-    let canvasFactory = function (options) {
+    let canvas = function (options) {
 
         options = options || {
             id: "BaseId"
@@ -21,12 +21,11 @@
         let grid = gridFactory();
 
         function clickHandler(e) {
-            // let cell = grid.getClosestCell(e.clientX, e.clientY);
-            let cell = grid.getCell(7, 5);
+            let cell = grid.getClosestCell(e.clientX, e.clientY).getAdjacentCell("bl");
             cell.style.color = 'rgb(0, 132, 180)';
             cell.style.backgroundColor = '#330000';
             cell.style.layer = 2;
-            cell.updateCell(grid.cellDiameter);
+            cell.updateCell();
         }
 
         function scrollUpHandler(e) {
@@ -37,10 +36,6 @@
                 grid.cellDiameter = grid.cellDiameter - (grid.cellDiameter * 0.1);
             }
             grid.reDraw();
-        }
-
-        function scrollDownHandler(e) {
-            grid.cellDiameter--;
         }
 
         function SetFullSize() {
@@ -59,7 +54,9 @@
                 },
                 xCount: 8,
                 yCount: 6,
-                cellThickness: 4,
+                get cellThickness() {
+                    return this.cellDiameter / 20;
+                },
                 cellArray: [],
                 init: function () {
                     this.fillGrid();
@@ -107,13 +104,13 @@
                     }).style.layer + 1;
 
                     this.cellArray.forEach(function (cell) {
-                        cell.drawCellBackground(module.cellDiameter);
+                        cell.drawCellBackground();
                     });
-                        
+
                     for (let i = 0; i < iterations; i++) {
                         this.cellArray.forEach(function (cell) {
                             if (cell.style.layer === i) {
-                                cell.drawCell(module.cellDiameter);
+                                cell.drawCell();
                             }
                         });
                     }
@@ -145,9 +142,9 @@
                             style = style || {
                                 color: this.foregoundColor,
                                 backgroundColor: this.backgroundColor,
-                                cellThickness: this.cellThickness,
                                 layer: 0
                             };
+
 
                             let cell = cellFactory(x, y, style, this);
                             this.cellArray.push(cell);
@@ -156,13 +153,22 @@
                 },
                 creationRules: [
                     {
+                        priority: -1,
+                        rule: function (x, y) {
+                            return {
+                                color: '#123456',
+                                backgroundColor: '#aafe96',
+                                layer: 1
+                            };
+                        }
+                    },
+                    {
                         priority: 1,
                         rule: function (x, y) {
                             if (x === -19 || x === 19 || y === -14 || y === 14) {
                                 return {
                                     color: '#123456',
                                     backgroundColor: '#fedcba',
-                                    cellThickness: 4,
                                     layer: 1
                                 };
                             }
@@ -175,8 +181,20 @@
                                 return {
                                     color: '#123456',
                                     backgroundColor: '#fedcba',
-                                    cellThickness: 4,
                                     layer: 1
+                                };
+                            }
+                        }
+                    },
+                    {
+                        priority: 2,
+                        rule: function (x, y) {
+                            if (y === 0 && x === 0) {
+                                return {
+                                    color: 'transparent',
+                                    backgroundColor: 'transparent',
+                                    layer: 1,
+                                    invisible: true
                                 };
                             }
                         }
@@ -190,63 +208,68 @@
         function cellFactory(xInd, yInd, style, grid) {
 
             const proto = {
-                grid: grid, 
+                grid: grid,
                 xIndex: xInd,
                 yIndex: yInd,
                 style: style,
-                drawCell: function (diameter) {
+                drawCell: function () {
 
-                    let adjustedCoords = this.getCoordinates(diameter);
+                    if (this.style.invisible){
+                        return;
+                    }
+                    
+                    let adjustedCoords = this.getCoordinates();
                     this.lastRenderedCoords = adjustedCoords;
-
+                    
                     painter.fillStyle = this.style.backgroundColor || 'transparent';
                     painter.strokeStyle = this.style.color || '#666';
-                    painter.lineWidth = this.style.cellThickness || '2';
+                    painter.lineWidth = this.grid.cellThickness;
 
-                    this.mapPath(diameter, adjustedCoords);
+                    this.mapPath(adjustedCoords);
 
                     painter.fill();
                     painter.stroke();
                 },
-                drawCellBackground: function (diameter) {
+                drawCellBackground: function () {
 
-                    let adjustedCoords = this.getCoordinates(diameter);
+                    let adjustedCoords = this.getCoordinates();
                     this.lastRenderedCoords = adjustedCoords;
 
                     painter.fillStyle = this.style.backgroundColor || 'white';
                     painter.strokeStyle = this.style.color || '#666';
-                    painter.lineWidth = this.style.cellThickness || '2';
+                    painter.lineWidth = this.grid.cellThickness;
 
                     // Doesn't Have cell bottom left
-                    if(!this.getAdjacentCell('bl')){
-                        this.mapLeftBackgroundPath(diameter, adjustedCoords);
+                    let blCell = this.getAdjacentCell('bl') || {invisible:true}; 
+                    if (blCell.invisible) {
+                        this.mapLeftBackgroundPath(adjustedCoords);
                         painter.fill();
                         painter.stroke();
                     }
 
                     // Doesn't Have cell bottom right
-                    if(!this.getAdjacentCell('br')){
-                        this.mapRightBackgroundPath(diameter, adjustedCoords);
+                    let brCell = this.getAdjacentCell('br')|| {invisible:true};
+                    if (brCell.invisible) {
+                        this.mapRightBackgroundPath(adjustedCoords);
                         painter.fill();
                         painter.stroke();
                     }
                 },
-                clearCell: function (diameter) {
-                    let adjustedCoords = this.getCoordinates(diameter);
+                clearCell: function () {
+                    let adjustedCoords = this.getCoordinates();
                     painter.fillStyle = 'white';
-                    this.mapPath(diameter, adjustedCoords);
+                    this.mapPath(adjustedCoords);
                     painter.fill();
                 },
-                updateCell: function (diameter) {
-                    this.clearCell(diameter);
-                    this.drawCell(diameter);
+                updateCell: function () {
+                    this.clearCell();
+                    this.drawCell();
                 },
-                mapPath: function (diameter, adjustedCoords) {
-                    let halfRadius = diameter / 4;
-                    let radius = diameter / 2;
-                    let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
+                mapPath: function (adjustedCoords) {
+                    let radius = this.grid.cellDiameter / 2;
+                    let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
 
-                    let skew = 0.2 * diameter;
+                    let skew = 0.2 * this.grid.cellDiameter;
 
                     let cord = [];
                     // Top
@@ -271,46 +294,11 @@
 
                     painter.lineTo(start.x, start.y);
                 },
-                mapBackgroundPath: function (diameter, adjustedCoords) {
-                    let halfRadius = diameter / 4;
-                    let radius = diameter / 2;
-                    let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
+                mapLeftBackgroundPath: function (adjustedCoords) {
+                    let radius = this.grid.cellDiameter / 2;
+                    let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
 
-                    let baseHeight = diameter / 4;
-                    let cord = [];
-
-                    // Bottom Left
-                    let start = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x - shortRadius};
-                    // Bottom Left -down
-                    cord[0] = {y: (adjustedCoords.y + radius / 2) + baseHeight, x: adjustedCoords.x - shortRadius};
-                    // Bottom -down
-                    cord[1] = {y: (adjustedCoords.y + radius) + baseHeight, x: adjustedCoords.x};
-                    // Bottom
-                    cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
-                    // Bottom -down
-                    cord[3] = {y: (adjustedCoords.y + radius) + baseHeight, x: adjustedCoords.x};
-                    // Bottom Right -down
-                    cord[4] = {y: (adjustedCoords.y + radius / 2) + baseHeight, x: adjustedCoords.x + shortRadius};
-                    // Bottom Right
-                    cord[5] = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x + shortRadius};
-                    // Bottom
-                    cord[6] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
-
-                    painter.beginPath();
-                    painter.moveTo(start.x, start.y);
-
-                    for (let i = 0; i < cord.length; i++) {
-                        painter.lineTo(cord[i].x, cord[i].y);
-                    }
-
-                    painter.lineTo(start.x, start.y);
-                },
-                mapLeftBackgroundPath: function (diameter, adjustedCoords) {
-                    let halfRadius = diameter / 4;
-                    let radius = diameter / 2;
-                    let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
-
-                    let baseHeight = diameter / 4;
+                    let baseHeight = this.grid.cellDiameter / 4;
                     let cord = [];
 
                     // Bottom Left
@@ -331,23 +319,22 @@
 
                     painter.lineTo(start.x, start.y);
                 },
-                mapRightBackgroundPath: function (diameter, adjustedCoords) {
-                    let halfRadius = diameter / 4;
-                    let radius = diameter / 2;
-                    let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
+                mapRightBackgroundPath: function (adjustedCoords) {
+                    let radius = this.grid.cellDiameter / 2;
+                    let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
 
-                    let baseHeight = diameter / 4;
+                    let baseHeight = this.grid.cellDiameter / 4;
                     let cord = [];
 
                     // Bottom Right
-                    let start =  {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x + shortRadius};
+                    let start = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x + shortRadius};
                     // Bottom Right -down
                     cord[0] = {y: (adjustedCoords.y + radius / 2) + baseHeight, x: adjustedCoords.x + shortRadius};
                     // Bottom -down
                     cord[1] = {y: (adjustedCoords.y + radius) + baseHeight, x: adjustedCoords.x};
                     // Bottom
                     cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
-                    
+
                     painter.beginPath();
                     painter.moveTo(start.x, start.y);
 
@@ -357,11 +344,11 @@
 
                     painter.lineTo(start.x, start.y);
                 },
-                getCoordinates: function (diameter) {
-                    let skew = 0.2 * diameter;
-                    let shortRadius = (diameter / 2) * Math.sqrt(3) / 2;
-                    let horizontalSpacing = (diameter / 2) * Math.sqrt(3);
-                    let verticleSpacing = (diameter * 0.75);
+                getCoordinates: function () {
+                    let skew = 0.2 * this.grid.cellDiameter;
+                    let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
+                    let horizontalSpacing = (this.grid.cellDiameter / 2) * Math.sqrt(3);
+                    let verticleSpacing = (this.grid.cellDiameter * 0.75);
 
                     let tempY = (this.yIndex * (verticleSpacing - skew));
                     let tempX = (this.xIndex * horizontalSpacing);
@@ -373,19 +360,25 @@
                     return getCenteredCoordinates(tempX, tempY);
                 },
                 getAdjacentCell: function (direction) {
-                    switch (direction){
+                    let xZigZagAdjust = this.xIndex;
+                    
+                    if (this.yIndex % 2 ===0){
+                        xZigZagAdjust = xZigZagAdjust - 1;
+                    }
+                    
+                    switch (direction) {
                         case 'l': // Left
-                            return this.grid.getCell(this.xIndex - 1, this.yIndex);
+                            return this.grid.getCell(xZigZagAdjust - 1, this.yIndex);
                         case 'tr': // Top Right
-                            return this.grid.getCell(this.xIndex, this.yIndex - 1);
+                            return this.grid.getCell(xZigZagAdjust, this.yIndex - 1);
                         case 'br': // Bottom Right
-                            return this.grid.getCell(this.xIndex + 1, this.yIndex + 1);
+                            return this.grid.getCell(xZigZagAdjust + 1, this.yIndex + 1);
                         case 'r': // Right
-                            return this.grid.getCell(this.xIndex + 1, this.yIndex);
+                            return this.grid.getCell(xZigZagAdjust + 1, this.yIndex);
                         case 'bl': // Bottom Left
-                            return this.grid.getCell(this.xIndex - 1, this.yIndex + 1);
+                            return this.grid.getCell(xZigZagAdjust, this.yIndex + 1);
                         case 'tl': // TOP Left
-                            return this.grid.getCell(this.xIndex - 1, this.yIndex - 1);
+                            return this.grid.getCell(xZigZagAdjust - 1, this.yIndex - 1);
                     }
                 }
             };
@@ -401,7 +394,7 @@
         }
     };
 
-    let canvas = canvasFactory({
+    let mainCanvas = canvas({
         id: "main-canvas"
     });
 
