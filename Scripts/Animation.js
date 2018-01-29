@@ -21,7 +21,7 @@
         let grid = gridFactory();
 
         function clickHandler(e) {
-            let cell = grid.getClosestCell(e.clientX, e.clientY).getAdjacentCell("bl");
+            let cell = grid.getClosestCell(e.clientX, e.clientY);
             cell.style.color = 'rgb(0, 132, 180)';
             cell.style.backgroundColor = '#330000';
             cell.style.layer = 2;
@@ -49,13 +49,17 @@
                 backgroundColor: '#eee',
                 foregoundColor: '#666666',
                 cellDiameter: 30,
+                skew: 0.3,
+                get skewedDiameter(){
+                    return this.cellDiameter * this.skew;
+                },
                 get cellDiameterShort() {
                     return (this.cellDiameter / 2) * Math.sqrt(3);
                 },
                 xCount: 8,
                 yCount: 6,
                 get cellThickness() {
-                    return this.cellDiameter / 20;
+                    return this.cellDiameter / 100;
                 },
                 cellArray: [],
                 init: function () {
@@ -70,6 +74,13 @@
                 },
                 getClosestCell: function (xCord, yCord) {
                     return this.cellArray.map(function (cell) {
+                        
+                        if (cell.lastRenderedCoords === undefined){
+                            return {
+                                distance: 99999
+                            };
+                        }
+                        
                         let xDif = xCord - cell.lastRenderedCoords.x;
                         let yDif = yCord - cell.lastRenderedCoords.y;
 
@@ -177,11 +188,12 @@
                     {
                         priority: 0,
                         rule: function (x, y) {
-                            if (y === 0 || x === 0) {
+                            if (y === 0 || x === 0 || y === 1) {
                                 return {
                                     color: '#123456',
                                     backgroundColor: '#fedcba',
-                                    layer: 1
+                                    layer: 1,
+                                    invisible: true
                                 };
                             }
                         }
@@ -191,10 +203,9 @@
                         rule: function (x, y) {
                             if (y === 0 && x === 0) {
                                 return {
-                                    color: 'transparent',
-                                    backgroundColor: 'transparent',
+                                    color: '#123456',
+                                    backgroundColor: '#fedcba',
                                     layer: 1,
-                                    invisible: true
                                 };
                             }
                         }
@@ -232,30 +243,39 @@
                 },
                 drawCellBackground: function () {
 
+                    if (this.style.invisible){
+                        return;
+                    }
+                    
                     let adjustedCoords = this.getCoordinates();
                     this.lastRenderedCoords = adjustedCoords;
 
                     painter.fillStyle = this.style.backgroundColor || 'white';
                     painter.strokeStyle = this.style.color || '#666';
                     painter.lineWidth = this.grid.cellThickness;
-
+                    
                     // Doesn't Have cell bottom left
-                    let blCell = this.getAdjacentCell('bl') || {invisible:true}; 
-                    if (blCell.invisible) {
+                    let blCell = this.getAdjacentCell('bl') || { style: {invisible:true}}; 
+                    if (blCell.style.invisible) {
                         this.mapLeftBackgroundPath(adjustedCoords);
                         painter.fill();
                         painter.stroke();
                     }
 
                     // Doesn't Have cell bottom right
-                    let brCell = this.getAdjacentCell('br')|| {invisible:true};
-                    if (brCell.invisible) {
+                    let brCell = this.getAdjacentCell('br')|| { style: {invisible:true}};
+                    if (brCell.style.invisible) {
                         this.mapRightBackgroundPath(adjustedCoords);
                         painter.fill();
                         painter.stroke();
                     }
                 },
                 clearCell: function () {
+
+                    if (this.style.invisible){
+                        return;
+                    }
+                    
                     let adjustedCoords = this.getCoordinates();
                     painter.fillStyle = 'white';
                     this.mapPath(adjustedCoords);
@@ -263,13 +283,28 @@
                 },
                 updateCell: function () {
                     this.clearCell();
+                    this.drawCellBackground();
                     this.drawCell();
+                    
+                    // See if other cells need updatings
+                    let blCell =this.getAdjacentCell('bl') || { style: {invisible:true}};
+                    let brCell =this.getAdjacentCell('br') || { style: {invisible:true}};
+                    
+                    if (blCell.style.invisible || brCell.style.invisible){
+                        // Other cells to update
+                        let bbCell = this.getAdjacentCell('bb');
+                        if (bbCell !== undefined){
+                            bbCell.clearCell();
+                            bbCell.drawCell();
+                        }
+                    }
+                    
+
                 },
                 mapPath: function (adjustedCoords) {
                     let radius = this.grid.cellDiameter / 2;
                     let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
-
-                    let skew = 0.2 * this.grid.cellDiameter;
+                    let skew = this.grid.skewedDiameter;
 
                     let cord = [];
                     // Top
@@ -297,7 +332,6 @@
                 mapLeftBackgroundPath: function (adjustedCoords) {
                     let radius = this.grid.cellDiameter / 2;
                     let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
-
                     let baseHeight = this.grid.cellDiameter / 4;
                     let cord = [];
 
@@ -322,7 +356,6 @@
                 mapRightBackgroundPath: function (adjustedCoords) {
                     let radius = this.grid.cellDiameter / 2;
                     let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
-
                     let baseHeight = this.grid.cellDiameter / 4;
                     let cord = [];
 
@@ -345,7 +378,7 @@
                     painter.lineTo(start.x, start.y);
                 },
                 getCoordinates: function () {
-                    let skew = 0.2 * this.grid.cellDiameter;
+                    let skew = this.grid.skewedDiameter;
                     let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
                     let horizontalSpacing = (this.grid.cellDiameter / 2) * Math.sqrt(3);
                     let verticleSpacing = (this.grid.cellDiameter * 0.75);
@@ -379,6 +412,8 @@
                             return this.grid.getCell(xZigZagAdjust, this.yIndex + 1);
                         case 'tl': // TOP Left
                             return this.grid.getCell(xZigZagAdjust - 1, this.yIndex - 1);
+                        case 'bb':
+                            return this.grid.getCell(this.xIndex, this.yIndex + 2);
                     }
                 }
             };
