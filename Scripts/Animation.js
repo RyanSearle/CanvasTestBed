@@ -49,7 +49,11 @@
                 backgroundColor: '#eee',
                 foregoundColor: '#666666',
                 cellDiameter: 30,
-                skew: 0.3,
+                skew: 1,
+                baseHeight: 1,
+                get skewedBaseHeight(){
+                    return this.cellDiameter * this.baseHeight * (1 - this.skew);    
+                },
                 get skewedDiameter(){
                     return this.cellDiameter * this.skew;
                 },
@@ -73,6 +77,7 @@
                     })[0];
                 },
                 getClosestCell: function (xCord, yCord) {
+                    const grid = this;
                     return this.cellArray.map(function (cell) {
                         
                         if (cell.lastRenderedCoords === undefined){
@@ -88,6 +93,8 @@
                         xDif = xDif < 0 ? xDif * -1 : xDif;
                         yDif = yDif < 0 ? yDif * -1 : yDif;
 
+                        yDif = yDif / grid.skew;
+                        
                         return {
                             cell: cell,
                             distance: xDif + yDif
@@ -236,10 +243,15 @@
                     painter.strokeStyle = this.style.color || '#666';
                     painter.lineWidth = this.grid.cellThickness;
 
+                    
                     this.mapPath(adjustedCoords);
 
                     painter.fill();
                     painter.stroke();
+
+                    // Debug: Draw center of cell 
+                    painter.fillStyle = "black";
+                    painter.fillRect(adjustedCoords.x, adjustedCoords.y, 2, 2);
                 },
                 drawCellBackground: function () {
 
@@ -305,20 +317,30 @@
                     let radius = this.grid.cellDiameter / 2;
                     let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
                     let skew = this.grid.skewedDiameter;
+                    
+                    let skewedSideLength = skew / 4;
 
+                    // Draw normal hexagon and multiply Y axis by skew ratio
+                    
                     let cord = [];
                     // Top
-                    let start = {y: (adjustedCoords.y - radius) + skew, x: adjustedCoords.x};
+                    // let start = {y: (adjustedCoords.y - radius) + skew, x: adjustedCoords.x};
+                    let start = {y: (adjustedCoords.y - (skew / 2)), x: adjustedCoords.x};
                     // Top Right
-                    cord[0] = {y: (adjustedCoords.y - radius / 2) + skew, x: adjustedCoords.x + shortRadius};
+                    // cord[0] = {y: (adjustedCoords.y - radius / 2) + skew, x: adjustedCoords.x + shortRadius};
+                    cord[0] = {y: (adjustedCoords.y - (skewedSideLength / 2)), x: adjustedCoords.x + shortRadius};
                     // Bottom Right
-                    cord[1] = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x + shortRadius};
+                    // cord[1] = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x + shortRadius};
+                    cord[1] = {y: adjustedCoords.y + (skewedSideLength / 2), x: adjustedCoords.x + shortRadius};
                     // Bottom
-                    cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
+                    // cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
+                    cord[2] = {y: adjustedCoords.y + (skew / 2), x: adjustedCoords.x};
                     // Bottom Left
-                    cord[3] = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x - shortRadius};
+                    // cord[3] = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x - shortRadius};
+                    cord[3] = {y: adjustedCoords.y + (skewedSideLength / 2), x: adjustedCoords.x - shortRadius};
                     // Top Left
-                    cord[4] = {y: (adjustedCoords.y - radius / 2) + skew, x: adjustedCoords.x - shortRadius};
+                    // cord[4] = {y: (adjustedCoords.y - radius / 2) + skew, x: adjustedCoords.x - shortRadius};
+                    cord[4] = {y: (adjustedCoords.y - (skewedSideLength / 2)), x: adjustedCoords.x - shortRadius};
 
                     painter.beginPath();
                     painter.moveTo(start.x, start.y);
@@ -332,17 +354,19 @@
                 mapLeftBackgroundPath: function (adjustedCoords) {
                     let radius = this.grid.cellDiameter / 2;
                     let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
-                    let baseHeight = this.grid.cellDiameter / 4;
+                    let baseHeight = this.grid.skewedBaseHeight;
                     let cord = [];
+                    let skew = this.grid.skewedDiameter;
+                    let skewedSideLength = skew / 4;
 
                     // Bottom Left
-                    let start = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x - shortRadius};
+                    let start = {y: adjustedCoords.y + (skewedSideLength / 2), x: adjustedCoords.x - shortRadius};
                     // Bottom Left -down
-                    cord[0] = {y: (adjustedCoords.y + radius / 2) + baseHeight, x: adjustedCoords.x - shortRadius};
+                    cord[0] = {y: adjustedCoords.y + (skewedSideLength / 2) + baseHeight, x: adjustedCoords.x - shortRadius};
                     // Bottom -down
-                    cord[1] = {y: (adjustedCoords.y + radius) + baseHeight, x: adjustedCoords.x};
+                    cord[1] = {y:  (adjustedCoords.y + (skew / 2)) + baseHeight, x: adjustedCoords.x};
                     // Bottom
-                    cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
+                    cord[2] = {y: adjustedCoords.y + (skew / 2), x: adjustedCoords.x};
 
                     painter.beginPath();
                     painter.moveTo(start.x, start.y);
@@ -356,17 +380,19 @@
                 mapRightBackgroundPath: function (adjustedCoords) {
                     let radius = this.grid.cellDiameter / 2;
                     let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
-                    let baseHeight = this.grid.cellDiameter / 4;
+                    let baseHeight = this.grid.skewedBaseHeight;
                     let cord = [];
-
+                    let skew = this.grid.skewedDiameter;
+                    let skewedSideLength = skew / 4;
+                    
                     // Bottom Right
-                    let start = {y: adjustedCoords.y + radius / 2, x: adjustedCoords.x + shortRadius};
+                    let start = {y: adjustedCoords.y + (skewedSideLength / 2), x: adjustedCoords.x + shortRadius};
                     // Bottom Right -down
-                    cord[0] = {y: (adjustedCoords.y + radius / 2) + baseHeight, x: adjustedCoords.x + shortRadius};
+                    cord[0] = {y: (adjustedCoords.y + (skewedSideLength / 2)) + baseHeight, x: adjustedCoords.x + shortRadius};
                     // Bottom -down
-                    cord[1] = {y: (adjustedCoords.y + radius) + baseHeight, x: adjustedCoords.x};
+                    cord[1] = {y:  (adjustedCoords.y + (skew / 2)) + baseHeight, x: adjustedCoords.x};
                     // Bottom
-                    cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
+                    cord[2] = {y: adjustedCoords.y + (skew / 2), x: adjustedCoords.x};
 
                     painter.beginPath();
                     painter.moveTo(start.x, start.y);
@@ -381,9 +407,10 @@
                     let skew = this.grid.skewedDiameter;
                     let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
                     let horizontalSpacing = (this.grid.cellDiameter / 2) * Math.sqrt(3);
-                    let verticleSpacing = (this.grid.cellDiameter * 0.75);
+                    let skewedSideLength = skew / 4;
+                    let verticleSpacing =  (skew / 2) + (skewedSideLength / 2);
 
-                    let tempY = (this.yIndex * (verticleSpacing - skew));
+                    let tempY = (this.yIndex * verticleSpacing);
                     let tempX = (this.xIndex * horizontalSpacing);
 
                     if (this.yIndex % 2 !== 0) {
