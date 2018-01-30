@@ -60,8 +60,8 @@
                 get cellDiameterShort() {
                     return (this.cellDiameter / 2) * Math.sqrt(3);
                 },
-                xCount: 8,
-                yCount: 6,
+                xCount: 30,
+                yCount: 30,
                 get cellThickness() {
                     return this.cellDiameter / 100;
                 },
@@ -240,7 +240,7 @@
                     this.lastRenderedCoords = adjustedCoords;
                     
                     painter.fillStyle = this.style.backgroundColor || 'transparent';
-                    painter.strokeStyle = this.style.color || '#666';
+                    painter.strokeStyle = this.grid.foregoundColor || '#666';
                     painter.lineWidth = this.grid.cellThickness;
 
                     
@@ -263,7 +263,7 @@
                     this.lastRenderedCoords = adjustedCoords;
 
                     painter.fillStyle = "#e24d00" || 'white';
-                    painter.strokeStyle = this.style.color || '#666';
+                    painter.strokeStyle = this.grid.foregoundColor || '#666';
                     painter.lineWidth = this.grid.cellThickness;
                     
                     // Doesn't Have cell bottom left
@@ -314,28 +314,22 @@
 
                 },
                 mapPath: function (adjustedCoords) {
-                    let diameter = this.grid.cellDiameter;
                     let radius = this.grid.cellDiameter / 2;
                     let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
-                    let skew = this.grid.skewedDiameter;
-                    
-                    let sideLength = radius;
-
-                    // Draw normal hexagon and multiply Y axis by skew ratio
                     
                     let cord = [];
                     // Top
                     let start = {y: (adjustedCoords.y - radius), x: adjustedCoords.x};
                     // Top Right
-                    cord[0] = {y: (adjustedCoords.y - (sideLength / 2)), x: adjustedCoords.x + shortRadius};
+                    cord[0] = {y: (adjustedCoords.y - (radius / 2)), x: adjustedCoords.x + shortRadius};
                     // Bottom Right
-                    cord[1] = {y: adjustedCoords.y + (sideLength / 2), x: adjustedCoords.x + shortRadius};
+                    cord[1] = {y: adjustedCoords.y + (radius / 2), x: adjustedCoords.x + shortRadius};
                     // Bottom
                     cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
                     // Bottom Left
-                    cord[3] = {y: adjustedCoords.y + (sideLength / 2), x: adjustedCoords.x - shortRadius};
+                    cord[3] = {y: adjustedCoords.y + (radius / 2), x: adjustedCoords.x - shortRadius};
                     // Top Left
-                    cord[4] = {y: (adjustedCoords.y - (sideLength / 2)), x: adjustedCoords.x - shortRadius};
+                    cord[4] = {y: (adjustedCoords.y - (radius / 2)), x: adjustedCoords.x - shortRadius};
 
                     start.y = start.y +((adjustedCoords.y - start.y) * (1 - this.grid.skew));
                     cord[0].y = cord[0].y +  ((adjustedCoords.y - cord[0].y) * (1 - this.grid.skew));
