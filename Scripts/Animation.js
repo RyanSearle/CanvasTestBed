@@ -49,7 +49,7 @@
                 backgroundColor: '#eee',
                 foregoundColor: '#666666',
                 cellDiameter: 30,
-                skew: 0.4,
+                skew: 0.6,
                 baseHeight: 0.5,
                 get skewedBaseHeight(){
                     return this.cellDiameter * this.baseHeight * (1 - this.skew);    
@@ -174,7 +174,7 @@
                         priority: -1,
                         rule: function (x, y) {
                             return {
-                                color: '#123456',
+                                color: '#333333',
                                 backgroundColor: '#aafe96',
                                 layer: 1
                             };
@@ -185,7 +185,7 @@
                         rule: function (x, y) {
                             if (x === -19 || x === 19 || y === -14 || y === 14) {
                                 return {
-                                    color: '#123456',
+                                    color: '#333333',
                                     backgroundColor: '#fedcba',
                                     layer: 1
                                 };
@@ -197,7 +197,7 @@
                         rule: function (x, y) {
                             if (y === 0 || x === 0 || y === 1) {
                                 return {
-                                    color: '#123456',
+                                    color: '#333333',
                                     backgroundColor: '#fedcba',
                                     layer: 1,
                                     invisible: true
@@ -210,7 +210,7 @@
                         rule: function (x, y) {
                             if (y === 0 && x === 0) {
                                 return {
-                                    color: '#123456',
+                                    color: '#333333',
                                     backgroundColor: '#fedcba',
                                     layer: 1,
                                 };
