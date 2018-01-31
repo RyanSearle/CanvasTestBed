@@ -12,6 +12,8 @@
         // Create bindings
         document.addEventListener('click', clickHandler);
         document.addEventListener('wheel', scrollUpHandler);
+        // document.addEventListener('keydown', keyUpDownHandler);
+        // document.addEventListener('keyup', keyUpDownHandler);
 
         // Init
         const painter = canvasElement.getContext('2d');
@@ -19,16 +21,34 @@
         SetFullSize();
 
         let grid = gridFactory();
-
+        let shiftKey = false;
+        
         function clickHandler(e) {
             let cell = grid.getClosestCell(e.clientX, e.clientY);
-            cell.style.color = 'rgb(0, 132, 180)';
-            cell.style.backgroundColor = '#330000';
-            cell.style.layer = 2;
+            
+            cell.style = {
+                color: 'rgb(0, 132, 180)',
+                backgroundColor: '#330000',
+                layer: 2
+            };
             cell.updateCell();
         }
 
         function scrollUpHandler(e) {
+            
+            if (e.shiftKey){
+                if (e.deltaY < 0) {
+                    if (grid.skew > 0.95) return true;
+                    grid.skew = grid.skew + 0.01;
+                } else {
+                    if (grid.skew < 0.05) return true;
+                    grid.skew = grid.skew - 0.01 ;
+                }
+                grid.reDraw();
+                return true;
+            }
+            
+            
             // Increase / Decrease on logarithm scale
             if (e.deltaY < 0) {
                 grid.cellDiameter = grid.cellDiameter + (grid.cellDiameter * 0.1);
@@ -36,7 +56,14 @@
                 grid.cellDiameter = grid.cellDiameter - (grid.cellDiameter * 0.1);
             }
             grid.reDraw();
+            return true;
         }
+        
+        // function keyUpDownHandler(e) {
+        //     shiftKey = e.shiftKey;
+        //     console.log(shiftKey);
+        //     return true;
+        // }
 
         function SetFullSize() {
             canvasElement.width = document.body.clientWidth - 50;
@@ -46,11 +73,15 @@
         function gridFactory() {
 
             const proto = {
+                cellArray: [],
+                sqrtThree: 1.7320508075688772,
                 backgroundColor: '#eee',
                 foregoundColor: '#666666',
                 cellDiameter: 30,
                 skew: 0.6,
                 baseHeight: 0.5,
+                xCount: 10,
+                yCount: 10,
                 get skewedBaseHeight(){
                     return this.cellDiameter * this.baseHeight * (1 - this.skew);    
                 },
@@ -58,14 +89,17 @@
                     return this.cellDiameter * this.skew;
                 },
                 get cellDiameterShort() {
-                    return (this.cellDiameter / 2) * Math.sqrt(3);
+                    return (this.cellDiameter / 2) * this.sqrtThree;
                 },
-                xCount: 30,
-                yCount: 30,
+                get shortRadius(){
+                    return (this.cellDiameter / 2) * this.sqrtThree / 2;    
+                },
+                get radius(){
+                    return (this.cellDiameter / 2);
+                },
                 get cellThickness() {
                     return this.cellDiameter / 100;
                 },
-                cellArray: [],
                 init: function () {
                     this.fillGrid();
                     this.reDraw();
@@ -175,7 +209,10 @@
                         rule: function (x, y) {
                             return {
                                 color: '#333333',
-                                backgroundColor: '#aafe96',
+                                random: Math.round(Math.random() * 155) + 100,
+                                get backgroundColor(){
+                                    return 'rgb(0, ' + this.random + ',0)';    
+                                },
                                 layer: 1
                             };
                         }
@@ -195,7 +232,7 @@
                     {
                         priority: 0,
                         rule: function (x, y) {
-                            if (y === 0 || x === 0 || y === 1) {
+                            if (y === 0 || x === 0)  {
                                 return {
                                     color: '#333333',
                                     backgroundColor: '#fedcba',
@@ -313,23 +350,20 @@
                     
 
                 },
-                mapPath: function (adjustedCoords) {
-                    let radius = this.grid.cellDiameter / 2;
-                    let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
-                    
+                mapPath: function (adjustedCoords) {                    
                     let cord = [];
                     // Top
-                    let start = {y: (adjustedCoords.y - radius), x: adjustedCoords.x};
+                    let start = {y: (adjustedCoords.y - this.grid.radius), x: adjustedCoords.x};
                     // Top Right
-                    cord[0] = {y: (adjustedCoords.y - (radius / 2)), x: adjustedCoords.x + shortRadius};
+                    cord[0] = {y: (adjustedCoords.y - (this.grid.radius / 2)), x: adjustedCoords.x + this.grid.shortRadius};
                     // Bottom Right
-                    cord[1] = {y: adjustedCoords.y + (radius / 2), x: adjustedCoords.x + shortRadius};
+                    cord[1] = {y: adjustedCoords.y + (this.grid.radius / 2), x: adjustedCoords.x + this.grid.shortRadius};
                     // Bottom
-                    cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
+                    cord[2] = {y: adjustedCoords.y + this.grid.radius, x: adjustedCoords.x};
                     // Bottom Left
-                    cord[3] = {y: adjustedCoords.y + (radius / 2), x: adjustedCoords.x - shortRadius};
+                    cord[3] = {y: adjustedCoords.y + (this.grid.radius / 2), x: adjustedCoords.x - this.grid.shortRadius};
                     // Top Left
-                    cord[4] = {y: (adjustedCoords.y - (radius / 2)), x: adjustedCoords.x - shortRadius};
+                    cord[4] = {y: (adjustedCoords.y - (this.grid.radius / 2)), x: adjustedCoords.x - this.grid.shortRadius};
 
                     start.y = start.y +((adjustedCoords.y - start.y) * (1 - this.grid.skew));
                     cord[0].y = cord[0].y +  ((adjustedCoords.y - cord[0].y) * (1 - this.grid.skew));
@@ -348,17 +382,14 @@
                     painter.lineTo(start.x, start.y);
                 },
                 mapLeftBackgroundPath: function (adjustedCoords) {
-                    let radius = this.grid.cellDiameter / 2;
-                    let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
+                    
                     let baseHeight = this.grid.skewedBaseHeight;
                     let cord = [];
-                    let skew = this.grid.skewedDiameter;
-                    let skewedSideLength = skew / 4;
 
                     // Bottom Left
-                    let start = {y: adjustedCoords.y + (radius / 2), x: adjustedCoords.x - shortRadius};
+                    let start = {y: adjustedCoords.y + (this.grid.radius / 2), x: adjustedCoords.x - this.grid.shortRadius};
                     // Bottom
-                    cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
+                    cord[2] = {y: adjustedCoords.y + this.grid.radius, x: adjustedCoords.x};
 
                     // Apply skew
                     start.y = start.y +((adjustedCoords.y - start.y) * (1 - this.grid.skew));
@@ -379,17 +410,13 @@
                     painter.lineTo(start.x, start.y);
                 },
                 mapRightBackgroundPath: function (adjustedCoords) {
-                    let radius = this.grid.cellDiameter / 2;
-                    let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
                     let baseHeight = this.grid.skewedBaseHeight;
                     let cord = [];
-                    let skew = this.grid.skewedDiameter;
-                    let skewedSideLength = skew / 4;
                     
                     // Bottom Right
-                    let start = {y: adjustedCoords.y + (radius / 2), x: adjustedCoords.x + shortRadius};
+                    let start = {y: adjustedCoords.y + (this.grid.radius / 2), x: adjustedCoords.x + this.grid.shortRadius};
                     // Bottom
-                    cord[2] = {y: adjustedCoords.y + radius, x: adjustedCoords.x};
+                    cord[2] = {y: adjustedCoords.y + this.grid.radius, x: adjustedCoords.x};
 
                     // Apply skew
                     start.y = start.y +((adjustedCoords.y - start.y) * (1 - this.grid.skew));
@@ -411,9 +438,7 @@
                     painter.lineTo(start.x, start.y);
                 },
                 getCoordinates: function () {
-                    let skew = this.grid.skewedDiameter;
-                    let shortRadius = (this.grid.cellDiameter / 2) * Math.sqrt(3) / 2;
-                    let horizontalSpacing = (this.grid.cellDiameter / 2) * Math.sqrt(3);
+                    let horizontalSpacing = this.grid.cellDiameterShort;
 
                     let verticleSpacing = this.grid.cellDiameter * 0.75 * this.grid.skew;
                     
@@ -421,7 +446,7 @@
                     let tempX = (this.xIndex * horizontalSpacing);
 
                     if (this.yIndex % 2 !== 0) {
-                        tempX = tempX + shortRadius;
+                        tempX = tempX + this.grid.shortRadius;
                     }
 
                     return getCenteredCoordinates(tempX, tempY);
